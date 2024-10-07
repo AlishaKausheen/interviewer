@@ -1,10 +1,10 @@
 import React from "react";
 
-function layout(){
+function DashboardLayout(){
     return (
         <div>
-            Layout
+            DashboardLayout
         </div>
     )
 }
-export default layout
+export default DashboardLayout

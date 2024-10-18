@@ -1,16 +1,9 @@
 //import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger , DialogHeader} from '@radix-ui/react-dialog'
 
 "use client"
-import React from 'react'
+import React, { useState } from 'react'
 import { Button } from '../../../components/button'
-////import {
-  //Dialog,
- // DialogContent,
-  //DialogDescription,
-  //DialogHeader,
-  //DialogTitle,
-  //DialogTrigger,
-//} from '@/components/ui/dialog';
+import { Input } from '../../../components/input'
 
 import {
   Dialog,
@@ -23,22 +16,35 @@ import {
 
 
 function AddNewInterview() {
+  const [openDialog,setOpenDialog] = useState(false);
   return (
     <div>
-      <div className='p-10 border rounded-lg bg-secondary hover:scale-105 hover:shadow-md cursor-pointer transition-all'>
+      <div className='p-10 border rounded-lg bg-secondary hover:scale-105 hover:shadow-md cursor-pointer transition-all'
+      onClick={()=>setOpenDialog(true)}>
         <h2 className='text-lg text-center'>+ Add New</h2>
       </div>
       
-     <Button>Alisha</Button>
-     <Dialog>
-  <DialogTrigger>Open</DialogTrigger>
-  <DialogContent>
+     
+     <Dialog open={openDialog}>
+  
+  <DialogContent className='max-w-2xl'>
     <DialogHeader>
-      <DialogTitle>Are you absolutely sure?</DialogTitle>
+      <DialogTitle className='text-2xl'>Tell us more about your Job interview</DialogTitle>
       <DialogDescription>
-        This action cannot be undone. This will permanently delete your account
-        and remove your data from our servers.
+        <div>
+          
+          <h2>Add details about your Job position/role, Job description and years of experience</h2>
+          <div>
+            <label> Job Role/Position</label>
+            <Input placeholder='Ex. Full-stack developer'/>
+          </div>
+        </div>
+        <div className='flex gap-5 justify-end'>
+          <Button variant="ghost" onClick={()=> setOpenDialog(false)}>Cancel</Button>
+          <Button>Start Interview</Button>
+        </div>
       </DialogDescription>
+
     </DialogHeader>
   </DialogContent>
 </Dialog>

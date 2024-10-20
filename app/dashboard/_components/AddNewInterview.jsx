@@ -22,6 +22,7 @@ import { LoaderCircle } from 'lucide-react'
 import { useUser } from '@clerk/nextjs'
 import moment from 'moment';
 import { MockInterview } from '../../../utils/schema'
+import { useRouter } from 'next/navigation'
 function AddNewInterview() {
   const [openDialog,setOpenDialog] = useState(false);
   const [jobPosition, setJobPosition] = useState();
@@ -29,6 +30,7 @@ function AddNewInterview() {
   const [jobExperience, setJobExperience] = useState();
   const [loading, setLoading] = useState(false);
   const [JsonResponse, setJsonResponse] = useState([]);
+  const router = useRouter();
   const {user} = useUser();
 
   const onSubmit = async (e)=>{
@@ -53,6 +55,11 @@ const resp= await db.insert(MockInterview).values({
   createdAt: moment().format('DD-MM-YYYY')
 }).returning({mockId:MockInterview.mockId});
 console.log("Insert id",resp);
+
+if(resp){
+  setOpenDialog(false);
+  router.push('/dashboard/interview/'+resp[0]?.mockId);
+}
 }else{
   console.log(error);
 }
@@ -113,13 +120,3 @@ setLoading(false);
 export default AddNewInterview
 
 
-insert(MockInterview).values({
-  mockId:uuidv4(),
-  jsonMockResp: MockJsonResp,
-  jobPosition:jobPosition,
-  jobExperience:jobExperience,
-  jobDesc: jobDesc,
-  createdBy: user?.primaryEmailAddress?.emailAddress,
-  createdAt: moment().format('DD-MM-yyyy')
-}).returning({mockId:MockInterview.mockId});
-console.log("Insert id",resp);

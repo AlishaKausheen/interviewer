@@ -5,11 +5,13 @@ import React, { useEffect, useState } from 'react'
 import { db } from '../../../../../utils/db';
 import { MockInterview } from '../../../../../utils/schema';
 import { eq } from 'drizzle-orm';
-import { Lightbulb, Mic, Volume2 } from 'lucide-react';
+import { Lightbulb, Mic, Pause, Volume2 } from 'lucide-react';
 import Webcam from 'react-webcam';
 import Image from 'next/image';
 import { Button } from '../../../../../components/button';
 import useSpeechToText from 'react-hook-speech-to-text';
+import { toast } from 'sonner';
+import { chatSession } from '../../../../../utils/GeminiAIModal';
 
 
 //import {QuestionsSection} from "./_components/QuestionsSection"
@@ -63,7 +65,29 @@ results.map((result)=>(
   setUserAnswer(prevAns=> prevAns+result?.transcript)
 ))
 },[results])
-  return (
+ 
+const SaveUserAnswer = async ()=>{
+  if(isRecording){
+stopSpeechToText();
+if(userAnswer?.length<10){
+  toast('Error while saving your answer, Please record again');
+}
+const feedbackPrompt ="Question: "+mockInterviewQuestion[activeQuestionIndex]?.question+", User Answer"+ userAnswer+", Depends on question and user answer for given interview question"+
+" please give us rating for answer and feedback as area of improvement if any in just 3-5 lines to improve it in JSON format with rating field and feedback field"
+
+const result = await chatSession.sendMessage(feedbackPrompt);
+
+const mockJsonResp = (result.response.text()).replace('```json', '').replace('```','');
+console.log(mockJsonResp);
+const JsonFeedbackResp= JSON.parse(mockJsonResp);
+  }else{
+startSpeechToText();
+  }
+
+}
+
+
+return (
     <div>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-1'>
         
@@ -98,7 +122,7 @@ results.map((result)=>(
   {/* audio and video recording */}
   <div className='flex items-center justify-center flex-col'>
       <div className='flex flex-col mt-20 justify-center items-center bg-black  rounded-lg p-5'>
-  <Image src={'/webcam.png'} width={200} height={200} className='absolute'/>
+  
     <Webcam
     mirrored={true}
     style={{
@@ -108,9 +132,9 @@ results.map((result)=>(
     }}
     />
     </div>
-<Button variant='outline' className='my-10'
-onClick={isRecording?stopSpeechToText:startSpeechToText}>
-  {isRecording? <h2 className='text-red-600 flex gap-2'><Mic/>Stop Recording</h2>:'Record Answer'}
+<Button variant='outline' className={`my-10 border ${isRecording ? 'border-red-600' : 'border-blue-800'}`}
+onClick={SaveUserAnswer}>
+  {isRecording? <h2 className='text-red-600 flex gap-2'><Pause/>Stop Recording</h2>:<h2 className='text-blue-800  flex gap-2'><Mic/>Record Answer</h2>}
   </Button>
 <Button onClick={() => setShowAnswer(!showAnswer)}>Show User Answer</Button>
     </div>

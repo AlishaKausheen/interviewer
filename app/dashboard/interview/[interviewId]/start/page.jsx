@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { db } from '../../../../../utils/db';
-import { MockInterview } from '../../../../../utils/schema';
+import { MockInterview, UserAnswer } from '../../../../../utils/schema';
 import { eq } from 'drizzle-orm';
 import { Lightbulb, Mic, Pause, Volume2 } from 'lucide-react';
 import Webcam from 'react-webcam';
@@ -12,6 +12,8 @@ import { Button } from '../../../../../components/button';
 import useSpeechToText from 'react-hook-speech-to-text';
 import { toast } from 'sonner';
 import { chatSession } from '../../../../../utils/GeminiAIModal';
+import { useUser } from '@clerk/nextjs';
+import moment from 'moment';
 
 
 //import {QuestionsSection} from "./_components/QuestionsSection"
@@ -23,11 +25,18 @@ function StartInterview({params}) {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [showAnswer, setShowAnswer] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const {user} = useUser();
   useEffect(()=>{
 
     GetInterviewDetails();
   },[])
 
+  useEffect(()=>{
+if(!isRecording && userAnswer.length>10){
+  UpdateUserAnswer();
+}
+  },[userAnswer])
   // used to get interview by mockid/interviewid
   const GetInterviewDetails=async ()=>{
     const result = await db.select().from(MockInterview).where(eq(MockInterview.mockId,params.interviewId));
@@ -66,27 +75,46 @@ results.map((result)=>(
 ))
 },[results])
  
-const SaveUserAnswer = async ()=>{
+const StartStopRecording = async ()=>{
   if(isRecording){
+  
 stopSpeechToText();
-if(userAnswer?.length<10){
-  toast('Error while saving your answer, Please record again');
-}
-const feedbackPrompt ="Question: "+mockInterviewQuestion[activeQuestionIndex]?.question+", User Answer"+ userAnswer+", Depends on question and user answer for given interview question"+
-" please give us rating for answer and feedback as area of improvement if any in just 3-5 lines to improve it in JSON format with rating field and feedback field"
 
-const result = await chatSession.sendMessage(feedbackPrompt);
-
-const mockJsonResp = (result.response.text()).replace('```json', '').replace('```','');
-console.log(mockJsonResp);
-const JsonFeedbackResp= JSON.parse(mockJsonResp);
   }else{
 startSpeechToText();
   }
 
 }
 
+const UpdateUserAnswer = async ()=>{
+  console.log(userAnswer);
+  setLoading(true);
+  const feedbackPrompt ="Question: "+mockInterviewQuestion[activeQuestionIndex]?.question+", User Answer"+ userAnswer+", Depends on question and user answer for given interview question"+
+  " please give us rating for answer and feedback as area of improvement if any in just 3-5 lines to improve it in JSON format with rating field and feedback field"
+  
+  const result = await chatSession.sendMessage(feedbackPrompt);
 
+  const mockJsonResp = (result.response.text()).replace('```json', '').replace('```','');
+  console.log(mockJsonResp);
+  const JsonFeedbackResp= JSON.parse(mockJsonResp);
+  
+  const resp= await db.insert(UserAnswer)
+  .values({
+    mockIdRef: interviewData?.mockId,
+    question: mockInterviewQuestion[activeQuestionIndex]?.question,
+    correctAns: mockInterviewQuestion[activeQuestionIndex]?.answer,
+    userAns: userAnswer,
+    feedback: JsonFeedbackResp?.feedback,
+    rating: JsonFeedbackResp?.rating,
+    userEmail: user?.primaryEmailAddress?.emailAddress,
+    createdAt: moment().format('DD-MM-YYYY')
+  })
+  if(resp){
+    toast('User Answer recorded successfully');
+  }
+  setUserAnswer('');
+  setLoading(false);
+}
 return (
     <div>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-1'>
@@ -96,7 +124,7 @@ return (
   <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5'>
   {mockInterviewQuestion && mockInterviewQuestion.map((question,index)=>(
     <h2  key={index}
-    onClick={() => setActiveQuestionIndex(index)} className={`p-2 bg-secondary rounded-full text-xs md:text-sm text-center cursor-pointer ${activeQuestionIndex==index&&'bg-blue-900 text-white'}`}>Question #{index+1}</h2>
+    onClick={() => setActiveQuestionIndex(index)} className={`p-2 bg-secondary rounded-full text-xs md:text-sm text-center cursor-pointer ${activeQuestionIndex==index&&'bg-blue-800 text-white'}`}>Question #{index+1}</h2>
   ))}
   </div>  
 
@@ -132,14 +160,22 @@ return (
     }}
     />
     </div>
-<Button variant='outline' className={`my-10 border ${isRecording ? 'border-red-600' : 'border-blue-800'}`}
-onClick={SaveUserAnswer}>
+<Button disable={loading} variant='outline' className={`my-10 border ${isRecording ? 'border-red-600' : 'border-blue-800'}`}
+onClick={StartStopRecording}>
   {isRecording? <h2 className='text-red-600 flex gap-2'><Pause/>Stop Recording</h2>:<h2 className='text-blue-800  flex gap-2'><Mic/>Record Answer</h2>}
   </Button>
-<Button onClick={() => setShowAnswer(!showAnswer)}>Show User Answer</Button>
+{/*<Button onClick={() => setShowAnswer(!showAnswer)}>Show User Answer</Button>*/}
     </div>
       </div>
+<div className=' flex justify-end gap-6 '>
+ {activeQuestionIndex>0 && 
+ <Button onClick={()=>setActiveQuestionIndex(activeQuestionIndex-1)}>Previous Question</Button>}
+  {activeQuestionIndex!=mockInterviewQuestion?.length-1 && 
+  <Button onClick={()=>setActiveQuestionIndex(activeQuestionIndex+1)}>Next Question</Button>}
+  {activeQuestionIndex==mockInterviewQuestion?.length-1 && 
+  <Button>End Interview </Button>}
 
+</div>
 
      
     </div>

@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { chatSession } from '../../../../../utils/GeminiAIModal';
 import { useUser } from '@clerk/nextjs';
 import moment from 'moment';
+import Link from 'next/link';
 
 
 //import {QuestionsSection} from "./_components/QuestionsSection"
@@ -56,6 +57,7 @@ const {
   results,
   startSpeechToText,
   stopSpeechToText,
+  setResults,
 } = useSpeechToText({
   continuous: true,
   useLegacyResults: false
@@ -111,8 +113,11 @@ const UpdateUserAnswer = async ()=>{
   })
   if(resp){
     toast('User Answer recorded successfully');
+    setUserAnswer('');
+    setResults([]);
   }
-  setUserAnswer('');
+  setResults([]);
+  //setUserAnswer('');
   setLoading(false);
 }
 return (
@@ -173,7 +178,7 @@ onClick={StartStopRecording}>
   {activeQuestionIndex!=mockInterviewQuestion?.length-1 && 
   <Button onClick={()=>setActiveQuestionIndex(activeQuestionIndex+1)}>Next Question</Button>}
   {activeQuestionIndex==mockInterviewQuestion?.length-1 && 
-  <Button>End Interview </Button>}
+  <Link href={'/dashboard/interview/'+interviewData?.mockId+'/feedback'}><Button>End Interview </Button></Link>}
 
 </div>
 
